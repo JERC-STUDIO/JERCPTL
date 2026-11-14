@@ -1,5 +1,5 @@
 {
-  "ptlApi": 1,
+  "ptlApi": 2,
   "pair": [2169, 2193],
   "serverVersions": ["1.26.45", "1.26.50", "1.26.51"],
   "packets": {
@@ -8,7 +8,11 @@
       "overrides": {
         "olderToNewer": [],
         "newerToOlder": [
-          { "type": "builtin", "name": "start_game_zero_checksum" }
+          {
+            "type": "zeroFixed",
+            "skip": ["markerAny:<nethernet>|<raknet>", "u8", "str", "nbt"],
+            "zeros": 8
+          }
         ]
       }
     },
@@ -72,12 +76,13 @@
     },
     "74": {
       "name": "boss_event",
+      "note": "2169 在 target_entity_id 后带 player_id(varint)，2193 不带。",
       "overrides": {
         "olderToNewer": [
-          { "type": "builtin", "name": "boss_event_to_2193" }
+          { "type": "deleteField", "skip": ["var"], "field": "var" }
         ],
         "newerToOlder": [
-          { "type": "builtin", "name": "boss_event_to_2169" }
+          { "type": "insertConst", "skip": ["var"], "bytes": "00" }
         ]
       }
     },
@@ -94,12 +99,13 @@
     },
     "111": {
       "name": "move_entity_delta",
+      "note": "2169 尾部无 ticks；反向只裁剪 [0, 2^32-1] 内的 varint，越界视为规则失败。",
       "overrides": {
         "olderToNewer": [
           { "type": "appendBytes", "bytes": "00" }
         ],
         "newerToOlder": [
-          { "type": "builtin", "name": "move_entity_delta_strip_ticks" }
+          { "type": "stripTrailing", "field": "var", "range": [0, 4294967295] }
         ]
       }
     },
@@ -114,12 +120,61 @@
     },
     "180": {
       "name": "dimension_data",
+      "note": "2169: max_height,min_height；2193: min_y,height_range + 尾部 default_biome。",
       "overrides": {
         "olderToNewer": [
-          { "type": "builtin", "name": "dimension_data_to_2193" }
+          {
+            "type": "arrayTransform",
+            "count": "var",
+            "requireEnd": true,
+            "element": [
+              { "op": "read", "name": "id", "type": "str" },
+              { "op": "read", "name": "max_height", "type": "zigzag" },
+              { "op": "read", "name": "min_height", "type": "zigzag" },
+              { "op": "read", "name": "generator", "type": "zigzag" },
+              { "op": "read", "name": "dimension_type", "type": "zigzag" },
+              { "op": "read", "name": "pack_id", "type": "fixed:16" },
+              { "op": "emit", "type": "str", "ref": "id" },
+              { "op": "emit", "type": "zigzag", "expr": "min_height" },
+              { "op": "emit", "type": "zigzag", "expr": "max_height - min_height" },
+              { "op": "emit", "type": "zigzag", "ref": "generator" },
+              { "op": "emit", "type": "zigzag", "ref": "dimension_type" },
+              { "op": "emit", "type": "bytes", "ref": "pack_id" },
+              {
+                "op": "emit",
+                "type": "str",
+                "ref": "generator",
+                "map": {
+                  "3": "minecraft:nether_wastes",
+                  "4": "minecraft:the_end",
+                  "5": "minecraft:the_void"
+                },
+                "default": "minecraft:plains"
+              }
+            ]
+          }
         ],
         "newerToOlder": [
-          { "type": "builtin", "name": "dimension_data_to_2169" }
+          {
+            "type": "arrayTransform",
+            "count": "var",
+            "requireEnd": true,
+            "element": [
+              { "op": "read", "name": "id", "type": "str" },
+              { "op": "read", "name": "min_y", "type": "zigzag" },
+              { "op": "read", "name": "height_range", "type": "zigzag" },
+              { "op": "read", "name": "generator", "type": "zigzag" },
+              { "op": "read", "name": "dimension_type", "type": "zigzag" },
+              { "op": "read", "name": "pack_id", "type": "fixed:16" },
+              { "op": "drop", "type": "str" },
+              { "op": "emit", "type": "str", "ref": "id" },
+              { "op": "emit", "type": "zigzag", "expr": "min_y + height_range" },
+              { "op": "emit", "type": "zigzag", "ref": "min_y" },
+              { "op": "emit", "type": "zigzag", "ref": "generator" },
+              { "op": "emit", "type": "zigzag", "ref": "dimension_type" },
+              { "op": "emit", "type": "bytes", "ref": "pack_id" }
+            ]
+          }
         ]
       }
     },

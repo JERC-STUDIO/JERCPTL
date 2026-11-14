@@ -1,16 +1,35 @@
 {
-  "ptlApi": 1,
+  "ptlApi": 2,
   "pair": [2193, 2225],
   "serverVersions": ["1.26.50", "1.26.51"],
   "packets": {
     "11": {
       "name": "start_game",
+      "note": "2225 在 exported_from_editor 后新增 editor_level_migration_version(u8)；两个方向都要清 block_pallette_checksum。",
       "overrides": {
         "olderToNewer": [
-          { "type": "builtin", "name": "start_game_editor_checksum" }
+          {
+            "type": "insertConst",
+            "skip": ["var", "var", "var", "skip:12", "skip:8", "skip:8", "skip:2", "str", "var", "var", "var", "skip:1", "var", "var", "var", "var", "skip:1", "var", "skip:2"],
+            "bytes": "00"
+          },
+          {
+            "type": "zeroFixed",
+            "skip": ["markerAny:<nethernet>|<raknet>", "u8", "str", "nbt"],
+            "zeros": 8
+          }
         ],
         "newerToOlder": [
-          { "type": "builtin", "name": "start_game_editor_checksum" }
+          {
+            "type": "deleteField",
+            "skip": ["var", "var", "var", "skip:12", "skip:8", "skip:8", "skip:2", "str", "var", "var", "var", "skip:1", "var", "var", "var", "var", "skip:1", "var", "skip:2"],
+            "field": "u8"
+          },
+          {
+            "type": "zeroFixed",
+            "skip": ["markerAny:<nethernet>|<raknet>", "u8", "str", "nbt"],
+            "zeros": 8
+          }
         ]
       }
     },
