@@ -1,0 +1,10 @@
+# build output (DLL + generated header)
+build/
+
+# local scratch
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+.vs/
