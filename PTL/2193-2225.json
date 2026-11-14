@@ -1,7 +1,7 @@
 {
   "ptlApi": 2,
   "pair": [2193, 2225],
-  "serverVersions": ["1.26.50", "1.26.51"],
+  "serverVersions": ["1.26.50", "1.26.51", "1.26.60"],
   "packets": {
     "11": {
       "name": "start_game",
@@ -35,11 +35,14 @@
     },
     "12": {
       "name": "add_player",
+      "note": "2225 在 links 与 device_id 之间新增 passenger_of_block(option)。反向仅接受 absent(0x00)。",
       "overrides": {
         "olderToNewer": [
           { "type": "builtin", "name": "add_player_passenger" }
         ],
-        "newerToOlder": []
+        "newerToOlder": [
+          { "type": "builtin", "name": "add_player_passenger" }
+        ]
       }
     },
     "13": {
@@ -67,19 +70,123 @@
     },
     "63": {
       "name": "player_list",
+      "note": "2225 把 play_fab_id 从 Skin 内提到 record 级（xbox_user_id 之后）。反向搬回 Skin。",
       "overrides": {
         "olderToNewer": [
           { "type": "builtin", "name": "player_list_fab" }
         ],
-        "newerToOlder": []
+        "newerToOlder": [
+          { "type": "builtin", "name": "player_list_fab" }
+        ]
+      }
+    },
+    "93": {
+      "name": "player_skin",
+      "note": "2225 的 Skin 删除了 play_fab_id；反向补空字符串占位。",
+      "overrides": {
+        "olderToNewer": [
+          { "type": "builtin", "name": "player_skin_fab" }
+        ],
+        "newerToOlder": [
+          { "type": "builtin", "name": "player_skin_fab" }
+        ]
       }
     },
     "129": {
       "name": "client_cache_status",
+      "note": "2193/2225 调色板缓存键不兼容，两个方向都强制上报 false。",
+      "overrides": {
+        "olderToNewer": [
+          { "type": "builtin", "name": "client_cache_force_off" }
+        ],
+        "newerToOlder": [
+          { "type": "builtin", "name": "client_cache_force_off" }
+        ]
+      }
+    },
+    "180": {
+      "name": "dimension_data",
+      "note": "2225 在每个 definition 尾部新增 cloud_height(varint) + render_clouds(bool)。",
+      "overrides": {
+        "olderToNewer": [
+          {
+            "type": "arrayTransform",
+            "count": "var",
+            "requireEnd": true,
+            "element": [
+              { "op": "read", "name": "id", "type": "str" },
+              { "op": "read", "name": "min_y", "type": "zigzag" },
+              { "op": "read", "name": "height_range", "type": "zigzag" },
+              { "op": "read", "name": "generator", "type": "zigzag" },
+              { "op": "read", "name": "dimension_type", "type": "zigzag" },
+              { "op": "read", "name": "pack_id", "type": "fixed:16" },
+              { "op": "read", "name": "default_biome", "type": "str" },
+              { "op": "emit", "type": "str", "ref": "id" },
+              { "op": "emit", "type": "zigzag", "ref": "min_y" },
+              { "op": "emit", "type": "zigzag", "ref": "height_range" },
+              { "op": "emit", "type": "zigzag", "ref": "generator" },
+              { "op": "emit", "type": "zigzag", "ref": "dimension_type" },
+              { "op": "emit", "type": "bytes", "ref": "pack_id" },
+              { "op": "emit", "type": "str", "ref": "default_biome" },
+              { "op": "emit", "type": "var", "const": 0 },
+              { "op": "emit", "type": "u8", "const": 0 }
+            ]
+          }
+        ],
+        "newerToOlder": [
+          {
+            "type": "arrayTransform",
+            "count": "var",
+            "requireEnd": true,
+            "element": [
+              { "op": "read", "name": "id", "type": "str" },
+              { "op": "read", "name": "min_y", "type": "zigzag" },
+              { "op": "read", "name": "height_range", "type": "zigzag" },
+              { "op": "read", "name": "generator", "type": "zigzag" },
+              { "op": "read", "name": "dimension_type", "type": "zigzag" },
+              { "op": "read", "name": "pack_id", "type": "fixed:16" },
+              { "op": "read", "name": "default_biome", "type": "str" },
+              { "op": "drop", "type": "var" },
+              { "op": "drop", "type": "u8" },
+              { "op": "emit", "type": "str", "ref": "id" },
+              { "op": "emit", "type": "zigzag", "ref": "min_y" },
+              { "op": "emit", "type": "zigzag", "ref": "height_range" },
+              { "op": "emit", "type": "zigzag", "ref": "generator" },
+              { "op": "emit", "type": "zigzag", "ref": "dimension_type" },
+              { "op": "emit", "type": "bytes", "ref": "pack_id" },
+              { "op": "emit", "type": "str", "ref": "default_biome" }
+            ]
+          }
+        ]
+      }
+    },
+    "353": {
+      "name": "matchmaking_state",
+      "note": "2225 新增 s2c 包；2193 客户端不认识，反向直接丢弃。",
       "overrides": {
         "olderToNewer": [],
         "newerToOlder": [
-          { "type": "builtin", "name": "client_cache_force_off" }
+          { "type": "drop" }
+        ]
+      }
+    },
+    "355": {
+      "name": "stonecutter_set_recipe",
+      "note": "2225 新增 s2c 包；2193 客户端不认识，反向直接丢弃。",
+      "overrides": {
+        "olderToNewer": [],
+        "newerToOlder": [
+          { "type": "drop" }
+        ]
+      }
+    },
+    "359": {
+      "name": "play_audio_content",
+      "note": "2225 新增 s2c 包；2193 客户端不认识，反向直接丢弃。",
+      "overrides": {
+        "olderToNewer": [],
+        "newerToOlder": [
+          { "type": "drop" }
         ]
       }
     }

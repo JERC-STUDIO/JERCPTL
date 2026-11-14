@@ -104,9 +104,10 @@
 
 | name | 说明 |
 | --- | --- |
-| `add_player_passenger` | AddPlayer 在 `device_id` 前插入/删除 `passenger_of_block` |
+| `add_player_passenger` | AddPlayer 在 `device_id` 前插入/删除 `passenger_of_block`（双向） |
 | `level_chunk_skeleton` | LevelChunk 切换 skeleton 模式 / 删除尾部 `client_biome_update` |
-| `player_list_fab` | PlayerList 的 `play_fab_id` 迁移 |
+| `player_list_fab` | PlayerList 的 `play_fab_id` 双向迁移（record 级 ↔ Skin 内） |
+| `player_skin_fab` | player_skin 的 Skin 内 `play_fab_id` 双向插入/删除 |
 | `client_cache_force_off` | c2s `client_cache_status` 强制 false |
 | `camera_presets_strip` | 为 2169 及更老客户端裁掉 CameraPresets 尾部字段 |
 | `play_sound_to_2169` / `play_sound_to_2193` | play_sound 尾部新增字段（`bypass` / `playback_position`） |
@@ -135,3 +136,14 @@
    需要整包重编码时才用 `builtin`，且必须先在引擎里实现并登记名字。
 4. `build.bat` 重建 `JERCPLD.PTL.dll`。
 5. 用引擎仓 `tools/verify-client` 的模拟客户端跑该版本回归，并抓包核对字段。
+
+## 路由与跳数
+
+- 引擎按已加载版本对自动建无向图，BFS 取最短链，**不设固定跳数上限**。
+  新增一档只需注册相邻版本对，例如再注册 `2225-2240` 后，`2168 -> 2240` 会自动走 4 跳。
+- 防环：BFS 的 `seen` 集合保证每个版本节点最多入队一次，路径长度天然 ≤ 节点数-1；
+  同一版本对重复注册不会被采用为更短路径。
+- 开销：每多一跳就多一次整包规则匹配（命中规则时才改写），
+  每包成本约 `O(跳数 × 该包规则数)`；[CONN] 行与启动日志会打印实际路由链，
+  `perfStatsEnabled` 打开后 PERF 汇总会给出每包平均跳数，便于评估新增档位的代价。
+
